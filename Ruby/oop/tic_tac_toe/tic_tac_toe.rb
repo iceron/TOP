@@ -40,11 +40,12 @@ class Tic_tac_toe
 
   #update the data (board)
   def update(choice, input)
+    result = false
     if !taken?(choice)
       @data[choice] = input
-      return true
+      result = true
     end
-    return false
+    result
   end
 
   #check for row pattern match
@@ -126,7 +127,6 @@ class Tic_tac_toe
 
   #play a game
   def play
-
     while true
       player_turn
       break if player_win? || board_full?
