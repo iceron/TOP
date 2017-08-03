@@ -1,22 +1,25 @@
 require_relative 'string/string'
 require_relative 'components/peg'
-
-
-class Key
-  attr_accessor :red, :white
-  def initialize red=0, white=0
-    @red = red
-    @white = white
-  end
-end
+require_relative 'components/key'
+require_relative 'players/human'
+require_relative 'players/computer'
 
 class Mastermind
   @@colors_list = ["red", "green", "yellow", "blue", "violet", "light_blue"]
   @@tile = "\u25A0 "
   def initialize turns=12
+    @turns = turns
+    #@codemaker_ai = true
+  end
+
+  def reset
+    generate_secret
+    @solved = false
+    @out_of_turns = false
+    @index = 0
     @data = []
     i = 0
-    while i < turns
+    while i < @turns
       hash = {
         pegs: [nil, nil, nil, nil],
         key: nil
@@ -24,31 +27,28 @@ class Mastermind
       @data.push(hash.dup)
       i = i + 1
     end
-    @index = 0
-    generate_secret
-    @codemaker_ai = true
-    @solved = false
-    @out_of_turns = false
   end
 
   def generate_secret
+    #@secret = []
+    #for i in 0...4 do
+      #valid = false
+      #while !valid
+        #color = @@colors_list.sample
+        #if !@secret.any? {|peg| peg.color == color}
+          #new_peg = Peg.new(color)
+          #@secret << new_peg
+          #valid = true
+        #end
+      #end
+    #end
     @secret = []
-    for i in 0...4 do
-      valid = false
-      while !valid
-        color = @@colors_list.sample
-        if !@secret.any? {|peg| peg.color == color}
-          new_peg = Peg.new(color)
-          @secret << new_peg
-          valid = true
-        end
-      end
-    end
+    @secret = @codemaker.generate_secret
   end
 
   def display
     @secret.each do |item|
-      if @codemaker_ai
+      if @codemaker.class.name == "Computer"
         if @solved || @out_of_turns
           print @@tile.public_send(item.color)
         else
@@ -87,47 +87,48 @@ class Mastermind
   end
 
   def update
-    red = 0
-    white = 0
-    @data[@index][:pegs].each_with_index do |peg, i|
-      next if peg.nil?
-      if peg.color == @secret[i].color
-        red = red + 1
-      elsif @secret.any? {|item| item.color == peg.color}
-        white = white + 1
-      end
-    end
+    #@data[@index][:pegs].each_with_index do |peg, i|
+      #next if peg.nil?
+      #if peg.color == @secret[i].color
+        #red = red + 1
+      #elsif @secret.any? {|item| item.color == peg.color}
+        #white = white + 1
+      #end
+    #end
+    red, white = @codemaker.maker_input @secret, @data, @index
     @data[@index][:key] = Key.new(red, white)
   end
 
   def player_turn
-    @data[@index][:pegs].each_with_index do |peg, i|
-      valid = false
-      choice = ""
-      if @index > 0 || i>0
-        system "clear"
-        display
-      end
-      print "Available colors: "
-      @@colors_list.each {|x| print x + " "}
-      print "\n"
-      while !valid
-        print "Enter color at slot ##{i+1}: "
-        choice = gets.chomp
-        choice.downcase!
-        if @@colors_list.any? {|color| color == choice}
-          if @data[@index][:pegs].any? {|peg| peg.color == choice rescue false}
-            puts "No duplicates allowed, try again."
-          else
-            valid = true
-          end
-        else
-          puts "Invalid input, try again."
+    if @index >=0 && @index < @turns
+      @data[@index][:pegs].each_with_index do |peg, i|
+        valid = false
+        choice = ""
+        if @index > 0 || i>0
+          system "clear"
+          display
         end
+        print "Available colors: "
+        @@colors_list.each {|x| print x + " "}
+        print "\n"
+        while !valid
+          #print "Enter color at slot ##{i+1}: "
+          #choice = gets.chomp
+          #choice.downcase!
+          choice = @codebreaker.breaker_input i+1
+          if @@colors_list.any? {|color| color == choice}
+            if @data[@index][:pegs].any? {|peg| peg.color == choice rescue false}
+              puts "No duplicates allowed, try again." if @codebreaker.class.name == "Human"
+            else
+              valid = true
+            end
+          else
+            puts "Invalid input, try again." if @codebreaker.class.name == "Human"
+          end
+        end
+        @data[@index][:pegs][i] = Peg.new(choice)
       end
-      @data[@index][:pegs][i] = Peg.new(choice)
     end
-
   end
 
   def out_of_turns?
@@ -148,16 +149,25 @@ class Mastermind
   end
 
   def play
-    initialize
     while true
       display
+      #@codemaker = Computer.new(false)
+      #@codebreaker = Human.new
+
+
       player_turn
-      update
-      system "clear"
-      break if solved? || out_of_turns?
+      if @codemaker.class.name == "Human"
+        system "clear"
+        display
+      end
+      if solved? || out_of_turns?
+        break
+      else
+        update
+      end
       @index = @index + 1
     end
-    update
+    system "clear"
     display
     puts "Combination is solved!" if @solved
     puts "Out of turns!" if @out_of_turns
@@ -170,6 +180,29 @@ class Mastermind
       system "clear"
       puts "Let's play a game of Mastermind!"
       puts "Guess the combination of colors!"
+      option = nil
+      while (option.nil?) || !(0..1).member?(option)
+        puts "[0] - Become a code breaker"
+        puts "[1] - Become a code maker"
+        print "Select an option: "
+        option = Integer(gets) rescue nil
+        if option.nil?
+          puts "Invalid input. Option should be an integer, try again."
+          next
+        end
+        puts "Invalid input, try again." if not (0..1).member?(option)
+      end
+      if option == 0
+        puts "You have chosen to be a code breaker!"
+        @codemaker = Computer.new(false)
+        @codebreaker = Human.new
+      else
+        puts "You have chosen to be a code maker!"
+        @codemaker = Human.new(false)
+        @codebreaker = Computer.new
+      end
+
+      reset
       play
       print "Play again (y/n)?: "
       choice = gets.chomp
