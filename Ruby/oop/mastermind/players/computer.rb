@@ -1,7 +1,6 @@
 require_relative 'player'
 
 class Computer < Player
-
   def generate_secret
     secret = []
     for i in 0...4 do

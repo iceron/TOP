@@ -7,11 +7,13 @@ require_relative 'players/computer'
 class Mastermind
   @@colors_list = ["red", "green", "yellow", "blue", "violet", "light_blue"]
   @@tile = "\u25A0 "
+
+  #initialize
   def initialize turns=12
     @turns = turns
-    #@codemaker_ai = true
   end
 
+  #reset data for new game
   def reset
     generate_secret
     @solved = false
@@ -29,23 +31,13 @@ class Mastermind
     end
   end
 
+  #generate new secret
   def generate_secret
-    #@secret = []
-    #for i in 0...4 do
-      #valid = false
-      #while !valid
-        #color = @@colors_list.sample
-        #if !@secret.any? {|peg| peg.color == color}
-          #new_peg = Peg.new(color)
-          #@secret << new_peg
-          #valid = true
-        #end
-      #end
-    #end
     @secret = []
     @secret = @codemaker.generate_secret
   end
 
+  #display the board
   def display
     @secret.each do |item|
       if @codemaker.class.name == "Computer"
@@ -59,7 +51,6 @@ class Mastermind
       end
     end
     print "\n"
-
     out = ""
     @data.reverse_each do |turn|
       keys = ""
@@ -86,19 +77,13 @@ class Mastermind
     end
   end
 
+  #update board data
   def update
-    #@data[@index][:pegs].each_with_index do |peg, i|
-      #next if peg.nil?
-      #if peg.color == @secret[i].color
-        #red = red + 1
-      #elsif @secret.any? {|item| item.color == peg.color}
-        #white = white + 1
-      #end
-    #end
     red, white = @codemaker.maker_input @secret, @data, @index
     @data[@index][:key] = Key.new(red, white)
   end
 
+  #simulate player turn
   def player_turn
     if @index >=0 && @index < @turns
       @data[@index][:pegs].each_with_index do |peg, i|
@@ -112,9 +97,6 @@ class Mastermind
         @@colors_list.each {|x| print x + " "}
         print "\n"
         while !valid
-          #print "Enter color at slot ##{i+1}: "
-          #choice = gets.chomp
-          #choice.downcase!
           choice = @codebreaker.breaker_input i+1
           if @@colors_list.any? {|color| color == choice}
             if @data[@index][:pegs].any? {|peg| peg.color == choice rescue false}
@@ -131,6 +113,7 @@ class Mastermind
     end
   end
 
+  #returns true if no turns left, false otherwise
   def out_of_turns?
     result = !@data[@data.length-1][:key].nil?
     puts "Out of turns!" if result
@@ -138,6 +121,7 @@ class Mastermind
     result
   end
 
+  #returns true if secret is solved, false otherwise
   def solved?
     result = false
     @data.each do |turn|
@@ -148,13 +132,10 @@ class Mastermind
     result
   end
 
+  #run a game
   def play
     while true
       display
-      #@codemaker = Computer.new(false)
-      #@codebreaker = Human.new
-
-
       player_turn
       if @codemaker.class.name == "Human"
         system "clear"
@@ -174,6 +155,7 @@ class Mastermind
     puts "Game ended."
   end
 
+  #main method
   def run
     run = true
     while run
